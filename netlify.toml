@@ -1,0 +1,14 @@
+[build]
+  publish = "."
+  command = ""
+
+[build.environment]
+  PYTHON_VERSION = "3.10"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+[functions]
+  directory = "netlify/functions" 

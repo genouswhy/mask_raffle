@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Zeeverse Genesis Mask Raffle Monitor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #6f42c1;
+            --secondary-color: #4e73df;
+            --accent-color: #1cc88a;
+            --dark-color: #172b4d;
+            --light-color: #f8f9fc;
+            --highlight-color: #ff8e25;
+        }
+        body {
+            background: linear-gradient(135deg, #f0f2fa 0%, #e6e9f5 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--dark-color);
+        }
+        .container {
+            margin-top: 20px;
+            margin-bottom: 40px;
+        }
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(31, 45, 61, 0.08);
+            border: none;
+            overflow: hidden;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 8px 25px rgba(31, 45, 61, 0.12);
+            transform: translateY(-2px);
+        }
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            border-bottom: none;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+        table {
+            margin-bottom: 0;
+        }
+        .table th {
+            font-weight: 600;
+            color: #5a5c69;
+            border-top: none;
+            background-color: #f8f9fc;
+        }
+        .ens {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        .badge {
+            font-weight: 500;
+            padding: 0.5em 0.75em;
+        }
+        .language-selector {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+        }
+        .stats-cards .card {
+            background: white;
+            text-align: center;
+            border-left: 4px solid var(--accent-color);
+        }
+        .stats-cards .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .stats-cards .card-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: #666;
+            letter-spacing: 0.5px;
+        }
+        .countdown-card {
+            background: linear-gradient(45deg, #3a1c71, #4e54c8);
+            color: white;
+            padding: 20px;
+            height: 100%;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+        .countdown-title {
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+            text-align: center;
+            display: block;
+            color: white;
+        }
+        .countdown-display {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .countdown-item {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 10px 15px;
+            min-width: 80px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .countdown-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        .countdown-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            opacity: 0.9;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .refresh-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            background-color: var(--light-color);
+            border-color: var(--light-color);
+            color: var(--primary-color);
+        }
+        .refresh-btn:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        .refresh-btn i {
+            font-size: 1.2rem;
+        }
+        .opensea-link {
+            color: var(--secondary-color);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .opensea-link:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+        .updates {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .probability-badge {
+            background: linear-gradient(45deg, #f1a3a3, #ffb199);
+            color: #723a3a;
+            border-radius: 99px;
+            padding: 0.25em 1em;
+            font-weight: 600;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 767px) {
+            .countdown-display {
+                flex-wrap: wrap;
+            }
+            .countdown-item {
+                min-width: 70px;
+            }
+            .countdown-value {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* 确保倒计时卡片样式正确 */
+        .stats-cards .card.countdown-card {
+            background: linear-gradient(45deg, #3a1c71, #4e54c8) !important;
+            color: white !important;
+            padding: 20px;
+            height: 100%; /* 确保100%高度 */
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
+            border-left: none !important; /* 覆盖任何可能的边框样式 */
+        }
+    </style>
+</head>
+<body>
+    <!-- Language Selector -->
+    <div class="language-selector btn-group">
+        <button type="button" class="btn btn-sm btn-outline-primary" id="lang-en">English</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="lang-zh">中文</button>
+    </div>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span data-lang="en">Zeeverse Genesis Mask Raffle Monitor</span>
+                        <span data-lang="zh">Zeeverse Genesis Mask 抽奖监控</span>
+                        <button id="refresh-button" class="btn btn-light btn-sm" title="Refresh data">
+                            <i class="fas fa-sync-alt"></i> <span data-lang="en">Refresh</span><span data-lang="zh">刷新</span>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div data-lang="en">
+                            <p><strong>Announcement:</strong> Shamans, as part of the Genesis Mask rework, we've forged 9 unique masks known as The Ancients - each holding a story, a spirit, and immense power.</p>
+                            <p><strong>How to enter:</strong> Send your Genesis Mask to community wallet - <code>0x4d3Cb2F6B1b73578C07c630F55A89D433722Bc06</code></p>
+                            <p><strong>Rules:</strong> Each mask gives you one entry. If selected, your mask will be transformed into an Ancient Mask and returned to you.</p>
+                        </div>
+                        <div data-lang="zh">
+                            <p><strong>公告：</strong>Shamans，作为Genesis Mask重塑计划的一部分，我们打造了9个独特的面具，被称为The Ancients - 每个都蕴含着故事、精神和强大的力量。</p>
+                            <p><strong>参与方式：</strong>将你的Genesis Mask发送到社区钱包 - <code>0x4d3Cb2F6B1b73578C07c630F55A89D433722Bc06</code></p>
+                            <p><strong>规则：</strong>每个mask获得一次抽奖机会。如果被选中，你的mask将变为Ancient Mask并返还给你。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards and Countdown -->
+        <div class="row stats-cards mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="card-value" id="total-donors">--</div>
+                        <div class="card-title" data-lang="en">Total Participants</div>
+                        <div class="card-title" data-lang="zh">总参与者</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="card-value" id="total-masks">--</div>
+                        <div class="card-title" data-lang="en">Total Masks Donated</div>
+                        <div class="card-title" data-lang="zh">总捐赠面具</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card h-100 countdown-card" style="background: linear-gradient(45deg, #3a1c71, #4e54c8) !important; color: white !important;">
+                    <div class="countdown-title" data-lang="en" style="color: white !important;">Time Remaining</div>
+                    <div class="countdown-title" data-lang="zh" style="color: white !important;">剩余时间</div>
+                    <div class="countdown-display" id="countdown">
+                        <div class="countdown-item" style="background: rgba(255, 255, 255, 0.15) !important;">
+                            <div class="countdown-value" id="days" style="color: white !important;">--</div>
+                            <div class="countdown-label" data-lang="en" style="color: rgba(255, 255, 255, 0.9) !important;">Days</div>
+                            <div class="countdown-label" data-lang="zh" style="color: rgba(255, 255, 255, 0.9) !important;">天</div>
+                        </div>
+                        <div class="countdown-item" style="background: rgba(255, 255, 255, 0.15) !important;">
+                            <div class="countdown-value" id="hours" style="color: white !important;">--</div>
+                            <div class="countdown-label" data-lang="en" style="color: rgba(255, 255, 255, 0.9) !important;">Hours</div>
+                            <div class="countdown-label" data-lang="zh" style="color: rgba(255, 255, 255, 0.9) !important;">时</div>
+                        </div>
+                        <div class="countdown-item" style="background: rgba(255, 255, 255, 0.15) !important;">
+                            <div class="countdown-value" id="minutes" style="color: white !important;">--</div>
+                            <div class="countdown-label" data-lang="en" style="color: rgba(255, 255, 255, 0.9) !important;">Minutes</div>
+                            <div class="countdown-label" data-lang="zh" style="color: rgba(255, 255, 255, 0.9) !important;">分</div>
+                        </div>
+                        <div class="countdown-item" style="background: rgba(255, 255, 255, 0.15) !important;">
+                            <div class="countdown-value" id="seconds" style="color: white !important;">--</div>
+                            <div class="countdown-label" data-lang="en" style="color: rgba(255, 255, 255, 0.9) !important;">Seconds</div>
+                            <div class="countdown-label" data-lang="zh" style="color: rgba(255, 255, 255, 0.9) !important;">秒</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Table Card -->
+        <div class="card">
+            <div class="card-header position-relative">
+                <span data-lang="en">Mask Donors</span>
+                <span data-lang="zh">面具捐赠者</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table" id="donor-table">
+                        <thead>
+                            <tr>
+                                <th data-lang="en">Donor Address</th>
+                                <th data-lang="zh">捐赠地址</th>
+                                <th data-lang="en">ENS Name</th>
+                                <th data-lang="zh">ENS域名</th>
+                                <th data-lang="en">Masks</th>
+                                <th data-lang="zh">面具数</th>
+                                <th data-lang="en">Last Donation</th>
+                                <th data-lang="zh">最近捐赠</th>
+                                <th data-lang="en">Chance for 1</th>
+                                <th data-lang="zh">抽中1个</th>
+                                <th data-lang="en">Chance for 2</th>
+                                <th data-lang="zh">抽中2个</th>
+                                <th data-lang="en">Chance for 3</th>
+                                <th data-lang="zh">抽中3个</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="text-center" data-lang="en">Loading data...</td>
+                                <td colspan="7" class="text-center" data-lang="zh">正在加载数据...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="updates">
+                            <span data-lang="en">Last updated:</span>
+                            <span data-lang="zh">最后更新:</span>
+                            <span id="last-update">--</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="updates">
+                            <span data-lang="en">Live draw:</span>
+                            <span data-lang="zh">开奖时间:</span>
+                            <span id="draw-time">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Language handling
+        const currentLang = localStorage.getItem('lang') || 'en';
+        
+        function setLanguage(lang) {
+            localStorage.setItem('lang', lang);
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                if (el.getAttribute('data-lang') === lang) {
+                    el.style.display = '';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+            
+            // Update button states
+            document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+            document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
+        }
+        
+        // Initialize language
+        setLanguage(currentLang);
+        
+        // Event listeners for language buttons
+        document.getElementById('lang-en').addEventListener('click', () => setLanguage('en'));
+        document.getElementById('lang-zh').addEventListener('click', () => setLanguage('zh'));
+
+        // Helper functions
+        function toOpensea(addr) {
+            return `https://opensea.io/${addr}`;
+        }
+        
+        function formatTime(ts) {
+            const d = new Date(ts * 1000);
+            return new Intl.DateTimeFormat(currentLang === 'en' ? 'en-US' : 'zh-CN', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(d);
+        }
+        
+        function formatISOTime(isoString) {
+            const d = new Date(isoString);
+            return new Intl.DateTimeFormat(currentLang === 'en' ? 'en-US' : 'zh-CN', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(d);
+        }
+        
+        function pct(p) {
+            return (p*100).toFixed(2) + '%';
+        }
+        
+        // Countdown function
+        function updateCountdown(deadlineStr) {
+            console.log("更新倒计时，时间为:", deadlineStr);
+            
+            if (!deadlineStr) {
+                console.error("倒计时时间为空!");
+                return;
+            }
+            
+            const deadline = new Date(deadlineStr).getTime();
+            const now = new Date().getTime();
+            const diff = deadline - now;
+            
+            console.log("当前时间:", new Date(), "目标时间:", new Date(deadline), "差值(ms):", diff);
+            
+            if (diff <= 0) {
+                document.getElementById('days').textContent = '0';
+                document.getElementById('hours').textContent = '0';
+                document.getElementById('minutes').textContent = '0';
+                document.getElementById('seconds').textContent = '0';
+                return;
+            }
+            
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            console.log("计算结果 - 天:", days, "小时:", hours, "分钟:", minutes, "秒:", seconds);
+            
+            document.getElementById('days').textContent = days;
+            document.getElementById('hours').textContent = hours;
+            document.getElementById('minutes').textContent = minutes;
+            document.getElementById('seconds').textContent = seconds;
+        }
+        
+        // Data loading function
+        let deadlineTime = '';
+        function loadData() {
+            document.getElementById('refresh-button').classList.add('loading');
+            
+            fetch('/api/donors')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.querySelector('#donor-table tbody');
+                    tbody.innerHTML = '';
+                    
+                    // Sort by count in descending order
+                    data.donors.sort((a, b) => b.count - a.count);
+                    
+                    for(const d of data.donors) {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><a href="${toOpensea(d.address)}" target="_blank" class="opensea-link">${d.address.slice(0,6)}...${d.address.slice(-4)}</a></td>
+                                <td class="ens">${d.ens || '-'}</td>
+                                <td>${d.count}</td>
+                                <td>${formatTime(d.last_time)}</td>
+                                <td><span class="probability-badge">${pct(d.prob_1)}</span></td>
+                                <td><span class="probability-badge">${pct(d.prob_2)}</span></td>
+                                <td><span class="probability-badge">${pct(d.prob_3)}</span></td>
+                            </tr>`;
+                    }
+                    
+                    // Update stats
+                    document.getElementById('total-donors').textContent = data.total_donors;
+                    document.getElementById('total-masks').textContent = data.total_masks;
+                    document.getElementById('last-update').textContent = formatTime(data.last_update);
+                    document.getElementById('draw-time').textContent = formatISOTime(data.raffle_live_draw);
+                    
+                    // 倒计时部分
+                    console.log("API返回的倒计时时间:", data.raffle_deadline);
+                    deadlineTime = data.raffle_deadline;
+                    updateCountdown(deadlineTime);
+                    
+                    // Remove loading state
+                    document.getElementById('refresh-button').classList.remove('loading');
+                })
+                .catch(error => {
+                    console.error('Error loading data:', error);
+                    document.getElementById('refresh-button').classList.remove('loading');
+                });
+        }
+        
+        // Manual refresh handler
+        document.getElementById('refresh-button').addEventListener('click', function() {
+            // First call API to manually refresh backend data
+            fetch('/api/refresh', {
+                method: 'POST'
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Then reload the data from the API
+                loadData();
+            })
+            .catch(err => {
+                console.error('Error refreshing data:', err);
+                document.getElementById('refresh-button').classList.remove('loading');
+            });
+        });
+        
+        // Initialize
+        loadData();
+        setInterval(loadData, 15000);
+        
+        // Update countdown every second
+        setInterval(() => {
+            updateCountdown(deadlineTime);
+        }, 1000);
+    </script>
+</body>
+</html> 

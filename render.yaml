@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: mask-raffle
+    env: python
+    buildCommand: pip install -r requirements-deploy.txt
+    startCommand: gunicorn deploy:app
+    envVars:
+      - key: ETHERSCAN_API_KEY
+        value: B45FXGBS87F2JNV1A1SNQU7MWYMK3X5N3C 

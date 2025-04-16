@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>Zeeverse Genesis Mask 抽奖实时监控</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        body { background: #f8fafc; }
+        .container { margin-top: 30px; }
+        .table { background: #fff; }
+        .ens { color: #888; font-size: 0.95em; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2 class="mb-3">Zeeverse Genesis Mask 抽奖实时监控</h2>
+    <div class="alert alert-info">
+        <b>公告：</b>Shamans, as part of the Genesis Mask rework, we've forged 9 unique masks known as The Ancients...<br>
+        <b>参与方式：</b>将你的Genesis Mask发送到社区钱包 <code>0x4d3Cb2F6B1b73578C07c630F55A89D433722Bc06</code><br>
+        <b>截止时间：</b>16.04 10:00 UTC<br>
+        <b>开奖时间：</b>16.04 12:00 UTC<br>
+        <b>规则：</b>每捐赠1个mask获得1次抽奖权，抽中后原mask将变为Ancient Mask返还。<br>
+    </div>
+    <table class="table table-bordered" id="donor-table">
+        <thead class="table-light">
+        <tr>
+            <th>捐赠人地址</th>
+            <th>ENS域名</th>
+            <th>捐赠mask数量</th>
+            <th>最近捐赠时间</th>
+            <th>抽中1个概率</th>
+            <th>抽中2个概率</th>
+            <th>抽中3个概率</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div id="last-update" class="text-end text-secondary"></div>
+</div>
+<script>
+function toOpensea(addr) {
+    return `https://opensea.io/${addr}`;
+}
+function formatTime(ts) {
+    const d = new Date(ts * 1000);
+    return d.toLocaleString();
+}
+function pct(p) {
+    return (p*100).toFixed(2) + '%';
+}
+function loadData() {
+    fetch('/api/donors').then(r=>r.json()).then(data => {
+        const tbody = document.querySelector('#donor-table tbody');
+        tbody.innerHTML = '';
+        data.donors.sort((a,b)=>b.count-a.count);
+        for(const d of data.donors) {
+            tbody.innerHTML += `<tr>
+                <td><a href="${toOpensea(d.address)}" target="_blank">${d.address.slice(0,6)}...${d.address.slice(-4)}</a></td>
+                <td class="ens">${d.ens||''}</td>
+                <td>${d.count}</td>
+                <td>${formatTime(d.last_time)}</td>
+                <td>${pct(d.prob_1)}</td>
+                <td>${pct(d.prob_2)}</td>
+                <td>${pct(d.prob_3)}</td>
+            </tr>`;
+        }
+        document.getElementById('last-update').innerText = '最后更新: ' + formatTime(data.last_update);
+    });
+}
+loadData();
+setInterval(loadData, 15000);
+</script>
+</body>
+</html> 
