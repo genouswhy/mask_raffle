@@ -4,6 +4,7 @@ import time
 import threading
 from flask import Flask, jsonify, send_from_directory, render_template_string, make_response
 import requests
+from datetime import datetime
 
 # 环境变量配置
 ETHERSCAN_API_KEY = os.environ.get('ETHERSCAN_API_KEY', 'B45FXGBS87F2JNV1A1SNQU7MWYMK3X5N3C')
@@ -16,6 +17,7 @@ app = Flask(__name__, static_folder='static')
 # 缓存存储
 cache = {
     'donors': [],
+    'history': [],
     'last_update': 0,
     'html_content': None
 }
@@ -66,16 +68,32 @@ def get_ens_for_address(address):
 def fetch_mask_donations():
     """获取捐赠数据"""
     try:
-        url = f'https://api.etherscan.io/api?module=account&action=tokennfttx&address={COMMUNITY_WALLET}&page=1&offset=100&sort=desc&apikey={ETHERSCAN_API_KEY}'
+        url = f'https://api.etherscan.io/api?module=account&action=tokennfttx&address={COMMUNITY_WALLET}&page=1&offset=200&sort=desc&apikey={ETHERSCAN_API_KEY}'
         resp = requests.get(url).json()
         result = resp.get('result', [])
         donations = {}
+        history_items = []
         
         for tx in result:
             if tx['to'].lower() == COMMUNITY_WALLET:
                 donor = tx['from'].lower()
                 token_id = tx['tokenID']
                 timestamp = int(tx['timeStamp'])
+                tx_hash = tx['hash']
+                
+                # 为历史记录添加数据
+                history_item = {
+                    'tx_hash': tx_hash,
+                    'token_id': token_id,
+                    'from_address': donor,
+                    'to_address': COMMUNITY_WALLET,
+                    'timestamp': timestamp,
+                    'date': datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S'),
+                    'ens': None
+                }
+                history_items.append(history_item)
+                
+                # 处理总体捐赠统计
                 if donor not in donations:
                     donations[donor] = {
                         'address': donor,
@@ -89,16 +107,32 @@ def fetch_mask_donations():
                 if token_id not in donations[donor]['token_ids']:
                     donations[donor]['token_ids'].append(token_id)
         
-        # 获取ENS
+        # 获取ENS并更新
         donor_list = list(donations.values())
-        for donor in donor_list:
-            if not donor['ens']:
-                donor['ens'] = get_ens_for_address(donor['address'])
+        address_ens_map = {}
         
-        return donor_list
+        # 为每个唯一地址获取ENS
+        all_addresses = set([d['address'] for d in donor_list])
+        for address in all_addresses:
+            ens = get_ens_for_address(address)
+            if ens:
+                address_ens_map[address] = ens
+        
+        # 更新捐赠者列表的ENS
+        for donor in donor_list:
+            donor['ens'] = address_ens_map.get(donor['address'])
+        
+        # 更新历史记录的ENS
+        for item in history_items:
+            item['ens'] = address_ens_map.get(item['from_address'])
+        
+        # 按时间排序历史记录（最新的在前）
+        history_items.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return donor_list, history_items
     except Exception as e:
         print(f"获取捐赠数据出错: {e}")
-        return []
+        return [], []
 
 def load_html_file(filename):
     """加载HTML文件，支持多个位置查找，如果找不到则返回默认HTML"""
@@ -127,9 +161,11 @@ def update_cache():
     """定期更新缓存"""
     while True:
         try:
-            cache['donors'] = fetch_mask_donations()
+            donors, history = fetch_mask_donations()
+            cache['donors'] = donors
+            cache['history'] = history
             cache['last_update'] = int(time.time())
-            print(f"缓存已更新，共 {len(cache['donors'])} 个捐赠者")
+            print(f"缓存已更新，共 {len(cache['donors'])} 个捐赠者, {len(cache['history'])} 条历史记录")
         except Exception as e:
             print(f"更新缓存出错: {e}")
         time.sleep(300)  # 5分钟更新一次
@@ -140,7 +176,9 @@ def api_donors():
     try:
         # 尝试从缓存获取，如果缓存为空，则获取新数据
         if not cache['donors']:
-            cache['donors'] = fetch_mask_donations()
+            donors, history = fetch_mask_donations()
+            cache['donors'] = donors
+            cache['history'] = history
             cache['last_update'] = int(time.time())
         
         # 计算概率
@@ -163,11 +201,32 @@ def api_donors():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/history')
+def api_history():
+    """API端点，返回历史捐赠数据"""
+    try:
+        # 尝试从缓存获取，如果缓存为空，则获取新数据
+        if not cache['history']:
+            donors, history = fetch_mask_donations()
+            cache['donors'] = donors
+            cache['history'] = history
+            cache['last_update'] = int(time.time())
+        
+        return jsonify({
+            'history': cache['history'],
+            'last_update': cache['last_update'],
+            'total_transactions': len(cache['history'])
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/refresh', methods=['POST'])
 def refresh_data():
     """手动刷新数据"""
     try:
-        cache['donors'] = fetch_mask_donations()
+        donors, history = fetch_mask_donations()
+        cache['donors'] = donors
+        cache['history'] = history
         cache['last_update'] = int(time.time())
         return jsonify({"status": "success"})
     except Exception as e:
@@ -222,7 +281,9 @@ if __name__ == '__main__':
     threading.Thread(target=update_cache, daemon=True).start()
     
     # 预加载数据和HTML
-    cache['donors'] = fetch_mask_donations()
+    donors, history = fetch_mask_donations()
+    cache['donors'] = donors
+    cache['history'] = history
     cache['last_update'] = int(time.time())
     
     # 获取端口，用于云平台部署

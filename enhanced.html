@@ -199,6 +199,15 @@
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
             border-left: none !important; /* 覆盖任何可能的边框样式 */
         }
+        
+        /* 添加标题分割线样式 */
+        .section-divider {
+            margin: 30px 0 20px 0;
+            border-bottom: 2px solid var(--light-color);
+            padding-bottom: 10px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
     </style>
 </head>
 <body>
@@ -285,21 +294,19 @@
             </div>
         </div>
 
-        <!-- Main Table Card -->
-        <div class="card">
+        <!-- Donors Table Card -->
+        <div class="card mb-4">
             <div class="card-header position-relative">
-                <span data-lang="en">Mask Donors</span>
-                <span data-lang="zh">面具捐赠者</span>
+                <span data-lang="en">Donation Leaderboard</span>
+                <span data-lang="zh">捐赠排行榜</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table" id="donor-table">
                         <thead>
                             <tr>
-                                <th data-lang="en">Donor Address</th>
-                                <th data-lang="zh">捐赠地址</th>
-                                <th data-lang="en">ENS Name</th>
-                                <th data-lang="zh">ENS域名</th>
+                                <th data-lang="en">Donor</th>
+                                <th data-lang="zh">捐赠者</th>
                                 <th data-lang="en">Masks</th>
                                 <th data-lang="zh">面具数</th>
                                 <th data-lang="en">Last Donation</th>
@@ -314,8 +321,8 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="7" class="text-center" data-lang="en">Loading data...</td>
-                                <td colspan="7" class="text-center" data-lang="zh">正在加载数据...</td>
+                                <td colspan="6" class="text-center" data-lang="en">Loading data...</td>
+                                <td colspan="6" class="text-center" data-lang="zh">正在加载数据...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -337,6 +344,47 @@
                             <span id="draw-time">--</span>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Table Card -->
+        <div class="card">
+            <div class="card-header position-relative">
+                <span data-lang="en">Donation History</span>
+                <span data-lang="zh">捐赠历史记录</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table" id="history-table">
+                        <thead>
+                            <tr>
+                                <th data-lang="en">Timestamp</th>
+                                <th data-lang="zh">时间</th>
+                                <th data-lang="en">Time Ago</th>
+                                <th data-lang="zh">多久以前</th>
+                                <th data-lang="en">From</th>
+                                <th data-lang="zh">来源</th>
+                                <th data-lang="en">Token ID</th>
+                                <th data-lang="zh">代币ID</th>
+                                <th data-lang="en">Transaction</th>
+                                <th data-lang="zh">交易哈希</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="text-center" data-lang="en">Loading history data...</td>
+                                <td colspan="5" class="text-center" data-lang="zh">正在加载历史数据...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white">
+                <div class="updates">
+                    <span data-lang="en">Total Transactions:</span>
+                    <span data-lang="zh">总交易数:</span>
+                    <span id="total-transactions">--</span>
                 </div>
             </div>
         </div>
@@ -373,6 +421,10 @@
             return `https://opensea.io/${addr}`;
         }
         
+        function toEtherscan(hash) {
+            return `https://etherscan.io/tx/${hash}`;
+        }
+
         function formatTime(ts) {
             const d = new Date(ts * 1000);
             return new Intl.DateTimeFormat(currentLang === 'en' ? 'en-US' : 'zh-CN', {
@@ -382,6 +434,31 @@
                 hour: '2-digit',
                 minute: '2-digit'
             }).format(d);
+        }
+        
+        function timeAgo(timestamp) {
+            const now = new Date();
+            const then = new Date(timestamp * 1000);
+            const diff = Math.floor((now - then) / 1000); // 差值（秒）
+            
+            if (diff < 60) {
+                return currentLang === 'en' ? `${diff} seconds ago` : `${diff} 秒前`;
+            } else if (diff < 3600) {
+                const minutes = Math.floor(diff / 60);
+                return currentLang === 'en' ? `${minutes} minute${minutes > 1 ? 's' : ''} ago` : `${minutes} 分钟前`;
+            } else if (diff < 86400) {
+                const hours = Math.floor(diff / 3600);
+                return currentLang === 'en' ? `${hours} hour${hours > 1 ? 's' : ''} ago` : `${hours} 小时前`;
+            } else if (diff < 2592000) {
+                const days = Math.floor(diff / 86400);
+                return currentLang === 'en' ? `${days} day${days > 1 ? 's' : ''} ago` : `${days} 天前`;
+            } else if (diff < 31536000) {
+                const months = Math.floor(diff / 2592000);
+                return currentLang === 'en' ? `${months} month${months > 1 ? 's' : ''} ago` : `${months} 个月前`;
+            } else {
+                const years = Math.floor(diff / 31536000);
+                return currentLang === 'en' ? `${years} year${years > 1 ? 's' : ''} ago` : `${years} 年前`;
+            }
         }
         
         function formatISOTime(isoString) {
@@ -397,6 +474,22 @@
         
         function pct(p) {
             return (p*100).toFixed(2) + '%';
+        }
+
+        function shortenAddress(address) {
+            return address.slice(0, 6) + '...' + address.slice(-4);
+        }
+
+        function shortenTxHash(hash) {
+            return hash.slice(0, 8) + '...' + hash.slice(-6);
+        }
+        
+        function displayDonor(address, ens) {
+            if (ens) {
+                return `<a href="${toOpensea(address)}" target="_blank" class="opensea-link">${ens}</a>`;
+            } else {
+                return `<a href="${toOpensea(address)}" target="_blank" class="opensea-link">${shortenAddress(address)}</a>`;
+            }
         }
         
         // Countdown function
@@ -435,11 +528,10 @@
             document.getElementById('seconds').textContent = seconds;
         }
         
-        // Data loading function
+        // Data loading functions
         let deadlineTime = '';
-        function loadData() {
-            document.getElementById('refresh-button').classList.add('loading');
-            
+
+        function loadDonorData() {
             fetch('/api/donors')
                 .then(r => r.json())
                 .then(data => {
@@ -452,8 +544,7 @@
                     for(const d of data.donors) {
                         tbody.innerHTML += `
                             <tr>
-                                <td><a href="${toOpensea(d.address)}" target="_blank" class="opensea-link">${d.address.slice(0,6)}...${d.address.slice(-4)}</a></td>
-                                <td class="ens">${d.ens || '-'}</td>
+                                <td>${displayDonor(d.address, d.ens)}</td>
                                 <td>${d.count}</td>
                                 <td>${formatTime(d.last_time)}</td>
                                 <td><span class="probability-badge">${pct(d.prob_1)}</span></td>
@@ -477,9 +568,42 @@
                     document.getElementById('refresh-button').classList.remove('loading');
                 })
                 .catch(error => {
-                    console.error('Error loading data:', error);
+                    console.error('Error loading donor data:', error);
                     document.getElementById('refresh-button').classList.remove('loading');
                 });
+        }
+
+        function loadHistoryData() {
+            fetch('/api/history')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.querySelector('#history-table tbody');
+                    tbody.innerHTML = '';
+                    
+                    // Loop through history items
+                    for(const h of data.history) {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${h.date}</td>
+                                <td>${timeAgo(h.timestamp)}</td>
+                                <td>${displayDonor(h.from_address, h.ens)}</td>
+                                <td>${h.token_id}</td>
+                                <td><a href="${toEtherscan(h.tx_hash)}" target="_blank" class="opensea-link">${shortenTxHash(h.tx_hash)}</a></td>
+                            </tr>`;
+                    }
+                    
+                    // Update stats
+                    document.getElementById('total-transactions').textContent = data.total_transactions;
+                })
+                .catch(error => {
+                    console.error('Error loading history data:', error);
+                });
+        }
+
+        function loadData() {
+            document.getElementById('refresh-button').classList.add('loading');
+            loadDonorData();
+            loadHistoryData();
         }
         
         // Manual refresh handler
@@ -501,7 +625,7 @@
         
         // Initialize
         loadData();
-        setInterval(loadData, 15000);
+        setInterval(loadData, 30000); // 更新间隔改为30秒，减轻服务器负担
         
         // Update countdown every second
         setInterval(() => {
