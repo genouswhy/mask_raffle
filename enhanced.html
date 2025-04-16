@@ -432,7 +432,8 @@
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                timeZoneName: 'short'
             }).format(d);
         }
         
@@ -468,7 +469,8 @@
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                timeZoneName: 'short'
             }).format(d);
         }
         
@@ -584,7 +586,7 @@
                     for(const h of data.history) {
                         tbody.innerHTML += `
                             <tr>
-                                <td>${h.date}</td>
+                                <td>${formatTime(h.timestamp)}</td>
                                 <td>${timeAgo(h.timestamp)}</td>
                                 <td>${displayDonor(h.from_address, h.ens)}</td>
                                 <td>${h.token_id}</td>
