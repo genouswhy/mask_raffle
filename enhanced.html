@@ -208,6 +208,58 @@
             font-weight: 600;
             color: var(--primary-color);
         }
+        
+        /* 添加获奖卡片样式 */
+        .winner-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            border: none !important;
+            box-shadow: 0 8px 25px rgba(31, 45, 61, 0.15);
+        }
+        
+        .winner-card .card-header {
+            background: linear-gradient(135deg, #6952c7, #4e54c8);
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            padding: 12px;
+            margin: 0;
+            width: 100%;
+            border-bottom: none;
+        }
+        
+        .winner-card .image-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fc;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            height: 350px;
+        }
+        
+        .winner-card .card-body {
+            padding: 15px;
+            width: 100%;
+            background-color: white;
+        }
+        
+        .mask-image {
+            width: auto;
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            object-position: center;
+        }
+        
+        /* 改进卡片布局 */
+        .winners-gallery .col-md-4 {
+            padding: 10px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -218,6 +270,26 @@
     </div>
 
     <div class="container">
+        <!-- 添加中奖信息区 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <span data-lang="en">🎉 Raffle Winners Announcement 🎉</span>
+                        <span data-lang="zh">🎉 抽奖获奖名单公布 🎉</span>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="text-center mb-4" data-lang="en">Congratulations to Our Ancient Mask Winners!</h4>
+                        <h4 class="text-center mb-4" data-lang="zh">恭喜以下Ancient Mask获奖者！</h4>
+                        
+                        <div class="row winners-gallery">
+                            <!-- 中奖信息将通过JS动态加载 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
@@ -520,6 +592,96 @@
             }
         }
         
+        // 加载中奖信息
+        const winnersMasks = [
+            { name: "Mask of Merchant", tokenId: "1751", image: "static/pic/merchant.jpg" },
+            { name: "Mask of Mischief", tokenId: "1415", image: "static/pic/mischief.jpg" },
+            { name: "Mask of Peacekeeper", tokenId: "289", image: "static/pic/peacekeeper.jpg" },
+            { name: "Mask of Soulkeeper", tokenId: "1832", image: "static/pic/soulkeeper.jpg" },
+            { name: "Mask of Kaya", tokenId: "2302", image: "static/pic/kaya.jpg" },
+            { name: "Mask of Waka", tokenId: "2711", image: "static/pic/waka.jpg" },
+            { name: "Mask of Yutu", tokenId: "80", image: "static/pic/yutu.jpg" },
+            { name: "Mask of Karu", tokenId: "424", image: "static/pic/karu.jpg" },
+            { name: "Mask of Inti", tokenId: "2905", image: "static/pic/inti.jpg" }
+        ];
+
+        // 根据历史记录查找中奖人信息
+        function findWinnerInfo(tokenId) {
+            // 默认返回值
+            let winnerInfo = {
+                address: "Unknown",
+                ens: null
+            };
+            
+            // 遍历历史记录查找对应tokenId的交易
+            fetch('/api/history')
+                .then(r => r.json())
+                .then(data => {
+                    // 查找对应tokenId的交易记录
+                    for(const item of data.history) {
+                        if(item.token_id === tokenId) {
+                            winnerInfo.address = item.from_address;
+                            winnerInfo.ens = item.ens;
+                            updateWinnerDisplay(tokenId, winnerInfo);
+                            break;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error finding winner info:', error);
+                });
+            
+            return winnerInfo;
+        }
+
+        // 更新中奖显示
+        function updateWinnerDisplay(tokenId, winnerInfo) {
+            const elements = document.querySelectorAll(`.winner-card[data-token-id="${tokenId}"]`);
+            if(elements.length > 0) {
+                const donorDisplay = elements[0].querySelector('.winner-donor');
+                if(donorDisplay) {
+                    donorDisplay.innerHTML = displayDonor(winnerInfo.address, winnerInfo.ens);
+                }
+            }
+        }
+
+        // 显示中奖信息
+        function displayWinners() {
+            const gallery = document.querySelector('.winners-gallery');
+            if(!gallery) return;
+            
+            gallery.innerHTML = '';
+            
+            winnersMasks.forEach(mask => {
+                const winnerCard = document.createElement('div');
+                winnerCard.className = 'col-md-4';
+                winnerCard.innerHTML = `
+                    <div class="card winner-card" data-token-id="${mask.tokenId}">
+                        <div class="card-header">
+                            ${mask.name} - ${mask.tokenId}
+                        </div>
+                        <div class="image-container">
+                            <img src="${mask.image}" class="mask-image" alt="${mask.name}">
+                        </div>
+                        <div class="card-body text-center">
+                            <p class="card-text mb-2">
+                                <span data-lang="en">Winner: </span>
+                                <span data-lang="zh">获奖者: </span>
+                                <span class="winner-donor">Loading...</span>
+                            </p>
+                        </div>
+                    </div>
+                `;
+                gallery.appendChild(winnerCard);
+                
+                // 查找并更新获奖者信息
+                findWinnerInfo(mask.tokenId);
+            });
+            
+            // 确保语言设置正确应用
+            setLanguage(currentLang);
+        }
+        
         // Countdown function
         function updateCountdown(deadlineStr) {
             console.log("更新倒计时，时间为:", deadlineStr);
@@ -659,6 +821,9 @@
         setInterval(() => {
             updateCountdown(deadlineTime);
         }, 1000);
+        
+        // 初始化时加载获奖信息
+        displayWinners();
     </script>
 </body>
 </html> 
